@@ -1,9 +1,13 @@
 import customtkinter as ctk
 from PIL import Image
 from image_operations import ImageOperations
+from tkinter import filedialog
+
+IMAGE_WIDTH=905 # 50% of 1280x720
+IMAGE_HEIGHT=509
 
 app = ctk.CTk()
-app.geometry('1080x720')
+app.geometry('1280x720')
 backend = ImageOperations()
 
 cropy_start = 0
@@ -13,7 +17,7 @@ cropx_end = backend.img.shape[1]
 
 def update_image_display():
     pil_img = backend.get_pil_image()
-    new_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(400, 300))
+    new_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(IMAGE_WIDTH, IMAGE_HEIGHT))
     image_label.configure(image=new_img)
 
 def apply_grayscale():
@@ -63,6 +67,13 @@ def apply_redo():
     if backend.redo():
         update_image_display()
 
+def save_image():
+    file = filedialog.asksaveasfile(mode='w', defaultextension=".png", initialfile="starry_night.png", title="Save image")
+    if file:
+        file.close()
+        backend.save(file.name)
+
+
 main_frame = ctk.CTkFrame(app)
 main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -107,6 +118,10 @@ undo_button.pack(padx=20, pady=5)
 # redo
 redo_button = ctk.CTkButton(controls_frame, text="redo", command=apply_redo)
 redo_button.pack(padx=20, pady=5)
+
+# save
+save_button = ctk.CTkButton(controls_frame, text="save", command=save_image)
+save_button.pack(padx=20, pady=5)
 
 image_frame = ctk.CTkFrame(main_frame)
 image_frame.pack(side="right", fill="both", expand=True)

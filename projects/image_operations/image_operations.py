@@ -24,14 +24,14 @@ class ImageOperations:
     
     def gray_scale(self):
         if len(self.img.shape) == 2:
-            return False
-        self.img = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
-        self.redo_stack.clear()
+            # Convert grayscale to BGR for display consistency
+            self.img = cv.cvtColor(self.img, cv.COLOR_GRAY2BGR)
+        else:
+            self.img = cv.cvtColor(self.img, cv.COLOR_BGR2GRAY)
         self.undo_stack.append(self.img)
+        self.redo_stack.clear()
 
     def crop(self, new_y_start, new_y_end, new_x_start, new_x_end) -> bool:
-        print("Shape of the image", self.img.shape)
-
         if new_y_start >= 0 and new_y_start < new_y_end and new_y_end < self.img.shape[0] and new_x_start >= 0 and new_x_start < new_x_end and new_x_end < self.img.shape[1]:
             self.undo_stack.append(self.img)
             self.redo_stack.clear()
@@ -39,10 +39,11 @@ class ImageOperations:
             return True
         else:
             return False
-
+        
+    def save(self, file_path):
+        cv.imwrite(file_path, self.img)
 
     def scale(self, scale_percent) -> bool:
-        print("scaling")
         width = int(self.img.shape[1] * scale_percent / 100)
         height = int(self.img.shape[0] * scale_percent / 100)
         dim = (width, height)
