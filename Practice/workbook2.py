@@ -60,4 +60,45 @@ df.sort_values(by="width", ascending=False)
 # 7
 import matplotlib.pyplot as plt
 
+fig, ax = plt.subplots(1, 3)
+gray_image = np.mean(image, axis=2).astype(np.uint8)
+ax[0].imshow(image)
+ax[1].imshow(image_flipped)
+ax[2].hist(gray_image.ravel(), bins=20)
+
+# not sure how to do this
+
+ax[0].plot()
+
+# 8. I dont see why this wouldent work.
+image = np.random.randint(0, 255, (64, 64))
+normalized = image / 255
+print(normalized.min(), normalized.max())
+
+
+
+# 9.
+df = pd.DataFrame({"image_id": [1, 2, 3, 4], "xmin": [1, 2, 3, 4], "ymin": [4, 8, 9, 10], "xmax": [14, 22, 33, 41], "ymax": [91, 82, 73, 64], "confidence": [1, 0.5, 0.25, 0.75]})
+
+df["width"] = df["xmax"] - df["xmin"]
+df["height"] = df["ymax"] - df["ymin"]
+df["area"] = df["width"] * df["height"]
+
+df = df[df["confidence"] > 0.6] # assmuming we want confidence over 0.6 since under dont really matter
+print(df)
+
+means = df.groupby("image_id")["area"].mean() 
+print(means)
+
+# 10 idk
+
+fix, ax = plt.subplots()
+ax.imshow(np.random.randint(0, 255, (128, 128, 3), dtype=np.uint8))
+rect1 = plt.Rectangle((10, 10), 40, 30, edgecolor='red', facecolor='none')
+rect2 = plt.Rectangle((50, 60), 20, 20, edgecolor='blue', facecolor='none')
+
+ax.add_patch(rect1)
+ax.add_patch(rect2)
+plt.show()
+
 
