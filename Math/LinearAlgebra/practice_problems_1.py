@@ -101,7 +101,4 @@ def eigen(matrix):
 matrix = np.arange(1, 10).reshape(3, 3)
 eigens = eigen(matrix)
 
-def valid_eigens(matrix, eigens):
-    
-
-
+# def valid_eigens(matrix, eigens):
