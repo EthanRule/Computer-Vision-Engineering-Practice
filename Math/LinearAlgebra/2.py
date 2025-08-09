@@ -13,6 +13,6 @@ edge_kernel = np.array([
 ])
 
 def apply_kernel(image, kernel):
-    return image_patch @ edge_kernel
+    return np.sum(image * kernel)
 
 print(apply_kernel(image_patch, edge_kernel))
