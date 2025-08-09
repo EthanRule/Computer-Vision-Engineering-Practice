@@ -1,974 +1,627 @@
+import pygame
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import customtkinter as ctk
-from tkinter import messagebox, scrolledtext
-import tkinter as tk
-from DataEngine import DataEngine
+from math_engine import MathEngine
 
-# Configure the appearance
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
-
-class MatrixTransformationApp:
+class MatrixVisualizerApp:
+    """Main application class using pygame"""
+    
     def __init__(self):
-        # Initialize the data engine
-        self.engine = DataEngine()
+        pygame.init()
+        self.width = 1200
+        self.height = 800
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        pygame.display.set_caption("Matrix Transformation Visualizer")
         
-        # Clean, professional color scheme with good contrast
+        # Colors
         self.colors = {
-            'primary': '#2563eb',      # Clean blue
-            'primary_hover': '#1d4ed8', # Darker blue for hover
-            'secondary': '#64748b',     # Slate gray
-            'background': '#f8fafc',    # Light gray background
-            'surface': '#ffffff',       # White surface
-            'text_primary': '#1e293b',  # Dark gray text
-            'text_secondary': '#64748b', # Medium gray text
-            'border': '#e2e8f0'        # Light border
+            'background': (40, 40, 50),
+            'panel': (60, 60, 70),
+            'button': (80, 80, 90),
+            'button_hover': (100, 100, 110),
+            'button_active': (50, 50, 60),
+            'text': (255, 255, 255),
+            'grid': (80, 80, 80),
+            'axis': (120, 120, 120),
+            'axis_x': (220, 70, 70),    # Red for X axis
+            'axis_y': (70, 220, 70),    # Green for Y axis
+            'axis_z': (70, 70, 220),    # Blue for Z axis
+            'original': (70, 130, 220),
+            'transformed': (220, 70, 70)
         }
         
-        # Setup GUI
-        self.setup_gui()
-        self.update_display()
-    
-    def setup_gui(self):
-        """Initialize the GUI components with clean, professional styling"""
-        self.root = ctk.CTk()
-        self.root.title("Matrix Transformation Visualizer")
-        self.root.geometry("1400x900")
-        self.root.configure(fg_color=("#f8fafc", "#1e293b"))
-        
-        # Configure window properties
-        self.root.minsize(1200, 800)
-        
-        # Create main container
-        main_container = ctk.CTkFrame(
-            self.root, 
-            fg_color="transparent",
-            corner_radius=0
-        )
-        main_container.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        # Configure grid weights
-        main_container.grid_columnconfigure(1, weight=1)
-        main_container.grid_rowconfigure(0, weight=1)
-        
-        # Left panel for controls
-        self.setup_left_panel(main_container)
-        
-        # Right panel for visualization
-        self.setup_right_panel(main_container)
-    
-    def setup_left_panel(self, parent):
-        """Setup the left control panel with clean styling"""
-        left_panel = ctk.CTkScrollableFrame(
-            parent,
-            width=420,
-            fg_color=("#ffffff", "#334155"),
-            corner_radius=12,
-            border_width=1,
-            border_color=("#e2e8f0", "#475569")
-        )
-        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 20))
-        
-        # Header
-        header_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
-        header_frame.pack(fill="x", pady=(0, 20))
-        
-        title_label = ctk.CTkLabel(
-            header_frame,
-            text="Matrix Transformation Lab",
-            font=ctk.CTkFont(size=22, weight="bold"),
-            text_color=("#1e293b", "#f1f5f9")
-        )
-        title_label.pack(pady=15)
-        
-        # Matrix Creation Section
-        self.setup_matrix_creation(left_panel)
-        
-        # Matrix Input Section
-        self.setup_matrix_input(left_panel)
-        
-        # Transformation Buttons
-        self.setup_transformation_buttons(left_panel)
-        
-        # Matrix Operations
-        self.setup_matrix_operations(left_panel)
-        
-        # Advanced Operations
-        self.setup_advanced_operations(left_panel)
-        
-        # History and Undo/Redo
-        self.setup_history_controls(left_panel)
-        
-        # Matrix Info Display
-        self.setup_info_display(left_panel)
-    
-    def create_section_frame(self, parent, title):
-        """Create a clean section frame with minimal styling"""
-        section = ctk.CTkFrame(
-            parent,
-            fg_color=("#f8fafc", "#475569"),
-            corner_radius=8,
-            border_width=1,
-            border_color=("#e2e8f0", "#64748b")
-        )
-        section.pack(fill="x", pady=(0, 15), padx=15)
-        
-        # Section header
-        title_label = ctk.CTkLabel(
-            section,
-            text=title,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color=("#1e293b", "#f1f5f9")
-        )
-        title_label.pack(pady=(15, 10))
-        
-        return section
-
-    def create_button(self, parent, text, command, width=120, height=32, style="primary"):
-        """Create a clean, professional button"""
-        if style == "primary":
-            fg_color = "#2563eb"
-            hover_color = "#1d4ed8"
-        else:  # secondary
-            fg_color = "#64748b"
-            hover_color = "#475569"
-            
-        return ctk.CTkButton(
-            parent,
-            text=text,
-            command=command,
-            width=width,
-            height=height,
-            corner_radius=6,
-            fg_color=fg_color,
-            hover_color=hover_color,
-            text_color="#ffffff",
-            font=ctk.CTkFont(size=13, weight="normal"),
-            border_width=0
-        )
-    def setup_matrix_creation(self, parent):
-        """Setup matrix creation controls for arbitrary dimensions"""
-        creation_frame = self.create_section_frame(parent, "Create Matrix")
-        
-        # Dimensions input
-        dim_frame = ctk.CTkFrame(creation_frame, fg_color="transparent")
-        dim_frame.pack(padx=15, pady=(0, 10), fill="x")
-        
-        ctk.CTkLabel(
-            dim_frame, 
-            text="Dimensions:", 
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=("#374151", "#9ca3af")
-        ).pack(anchor="w")
-        
-        # Row and column inputs
-        size_container = ctk.CTkFrame(dim_frame, fg_color="transparent")
-        size_container.pack(fill="x", pady=(5, 0))
-        
-        ctk.CTkLabel(size_container, text="Rows:", text_color=("#6b7280", "#9ca3af")).pack(side="left")
-        self.rows_entry = ctk.CTkEntry(size_container, width=50, height=24)
-        self.rows_entry.pack(side="left", padx=(5, 15))
-        self.rows_entry.insert(0, "2")
-        
-        ctk.CTkLabel(size_container, text="Cols:", text_color=("#6b7280", "#9ca3af")).pack(side="left")
-        self.cols_entry = ctk.CTkEntry(size_container, width=50, height=24)
-        self.cols_entry.pack(side="left", padx=(5, 0))
-        self.cols_entry.insert(0, "2")
-        
-        # Matrix creation buttons
-        button_container = ctk.CTkFrame(creation_frame, fg_color="transparent")
-        button_container.pack(padx=15, pady=(5, 15), fill="x")
-        
-        # Row 1
-        row1 = ctk.CTkFrame(button_container, fg_color="transparent")
-        row1.pack(fill="x", pady=2)
-        
-        self.create_button(row1, "Identity", self.create_identity, width=85, height=28).pack(side="left", padx=(0, 5))
-        self.create_button(row1, "Random", self.create_random, width=85, height=28).pack(side="left", padx=5)
-        self.create_button(row1, "Zeros", self.create_zeros, width=85, height=28).pack(side="left", padx=(5, 0))
-        
-        # Row 2
-        row2 = ctk.CTkFrame(button_container, fg_color="transparent")
-        row2.pack(fill="x", pady=(5, 0))
-        
-        self.create_button(row2, "Ones", self.create_ones, width=85, height=28, style="secondary").pack(side="left", padx=(0, 5))
-        self.create_button(row2, "2x2 Default", self.create_default_2x2, width=85, height=28, style="secondary").pack(side="left", padx=5)
-        self.create_button(row2, "6x2 Example", self.create_6x2_example, width=85, height=28, style="secondary").pack(side="left", padx=(5, 0))
-
-    def setup_matrix_input(self, parent):
-        """Setup matrix input controls with clean styling"""
-        matrix_frame = self.create_section_frame(parent, "Transformation Matrix")
-        
-        # Matrix entries container
-        entries_container = ctk.CTkFrame(matrix_frame, fg_color="transparent")
-        entries_container.pack(pady=(0, 15))
-        
-        # Matrix bracket visual
-        bracket_frame = ctk.CTkFrame(entries_container, fg_color="transparent")
-        bracket_frame.pack(pady=10)
-        
-        # Left bracket
-        ctk.CTkLabel(
-            bracket_frame, 
-            text="[", 
-            font=ctk.CTkFont(size=32), 
-            text_color=("#64748b", "#94a3b8")
-        ).grid(row=0, column=0, rowspan=2, padx=(0, 8))
-        
-        # Matrix entries with clean styling
-        entry_style = {
-            "width": 80,
-            "height": 32,
-            "corner_radius": 6,
-            "border_width": 1,
-            "border_color": ("#d1d5db", "#64748b"),
-            "fg_color": ("#ffffff", "#334155"),
-            "text_color": ("#1e293b", "#f1f5f9"),
-            "font": ctk.CTkFont(size=14)
-        }
-        
-        self.a11 = ctk.CTkEntry(bracket_frame, **entry_style)
-        self.a12 = ctk.CTkEntry(bracket_frame, **entry_style)
-        self.a21 = ctk.CTkEntry(bracket_frame, **entry_style)
-        self.a22 = ctk.CTkEntry(bracket_frame, **entry_style)
-        
-        # Set default values (identity matrix)
-        self.a11.insert(0, "1.0")
-        self.a12.insert(0, "0.0")
-        self.a21.insert(0, "0.0")
-        self.a22.insert(0, "1.0")
-        
-        # Grid layout
-        self.a11.grid(row=0, column=1, padx=4, pady=4)
-        self.a12.grid(row=0, column=2, padx=4, pady=4)
-        self.a21.grid(row=1, column=1, padx=4, pady=4)
-        self.a22.grid(row=1, column=2, padx=4, pady=4)
-        
-        # Right bracket
-        ctk.CTkLabel(
-            bracket_frame, 
-            text="]", 
-            font=ctk.CTkFont(size=32), 
-            text_color=("#64748b", "#94a3b8")
-        ).grid(row=0, column=3, rowspan=2, padx=(8, 0))
-        
-        # Apply button
-        apply_btn = self.create_button(
-            matrix_frame, 
-            "Apply Matrix", 
-            self.apply_custom_matrix, 
-            width=140,
-            height=36
-        )
-        apply_btn.pack(pady=(0, 15))
-    
-    def setup_transformation_buttons(self, parent):
-        """Setup preset transformation buttons with create/apply modes"""
-        trans_frame = self.create_section_frame(parent, "Transformations")
-        
-        # Mode selection
-        mode_frame = ctk.CTkFrame(trans_frame, fg_color="transparent")
-        mode_frame.pack(padx=15, pady=(0, 10), fill="x")
-        
-        ctk.CTkLabel(
-            mode_frame, 
-            text="Mode:", 
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=("#374151", "#9ca3af")
-        ).pack(side="left")
-        
-        self.transform_mode = ctk.StringVar(value="create")
-        
-        create_radio = ctk.CTkRadioButton(
-            mode_frame, 
-            text="Create Matrix", 
-            variable=self.transform_mode, 
-            value="create",
-            text_color=("#374151", "#9ca3af")
-        )
-        create_radio.pack(side="left", padx=(10, 15))
-        
-        apply_radio = ctk.CTkRadioButton(
-            mode_frame, 
-            text="Apply to Current", 
-            variable=self.transform_mode, 
-            value="apply",
-            text_color=("#374151", "#9ca3af")
-        )
-        apply_radio.pack(side="left")
-        
-        # Rotation section
-        rot_frame = ctk.CTkFrame(trans_frame, fg_color="transparent")
-        rot_frame.pack(fill="x", padx=15, pady=5)
-        
-        ctk.CTkLabel(
-            rot_frame, 
-            text="Rotation (degrees):", 
-            font=ctk.CTkFont(size=13),
-            text_color=("#1e293b", "#f1f5f9")
-        ).pack(side="left")
-        
-        self.rotation_entry = ctk.CTkEntry(
-            rot_frame, 
-            width=80, 
-            height=28,
-            corner_radius=4,
-            font=ctk.CTkFont(size=12),
-            fg_color=("#ffffff", "#334155"),
-            text_color=("#1e293b", "#f1f5f9"),
-            border_color=("#d1d5db", "#64748b")
-        )
-        self.rotation_entry.pack(side="left", padx=(8, 8))
-        self.rotation_entry.insert(0, "45")
-        
-        self.create_button(rot_frame, "Rotate", self.apply_rotation, width=80, height=28).pack(side="left")
-        
-        # Scaling section
-        scale_frame = ctk.CTkFrame(trans_frame, fg_color="transparent")
-        scale_frame.pack(fill="x", padx=15, pady=5)
-        
-        ctk.CTkLabel(
-            scale_frame, 
-            text="Scale X:", 
-            font=ctk.CTkFont(size=13),
-            text_color=("#1e293b", "#f1f5f9")
-        ).pack(side="left")
-        
-        self.scale_x_entry = ctk.CTkEntry(
-            scale_frame, 
-            width=60, 
-            height=28,
-            corner_radius=4,
-            font=ctk.CTkFont(size=12),
-            fg_color=("#ffffff", "#334155"),
-            text_color=("#1e293b", "#f1f5f9"),
-            border_color=("#d1d5db", "#64748b")
-        )
-        self.scale_x_entry.pack(side="left", padx=(4, 8))
-        self.scale_x_entry.insert(0, "1.5")
-        
-        ctk.CTkLabel(
-            scale_frame, 
-            text="Y:", 
-            font=ctk.CTkFont(size=13),
-            text_color=("#1e293b", "#f1f5f9")
-        ).pack(side="left")
-        
-        self.scale_y_entry = ctk.CTkEntry(
-            scale_frame, 
-            width=60, 
-            height=28,
-            corner_radius=4,
-            font=ctk.CTkFont(size=12),
-            fg_color=("#ffffff", "#334155"),
-            text_color=("#1e293b", "#f1f5f9"),
-            border_color=("#d1d5db", "#64748b")
-        )
-        self.scale_y_entry.pack(side="left", padx=(4, 8))
-        self.scale_y_entry.insert(0, "1.5")
-        
-        self.create_button(scale_frame, "Scale", self.apply_scaling, width=80, height=28).pack(side="left")
-        
-        # Reflection buttons
-        ref_frame = ctk.CTkFrame(trans_frame, fg_color="transparent")
-        ref_frame.pack(fill="x", padx=15, pady=5)
-        
-        ctk.CTkLabel(
-            ref_frame, 
-            text="Reflect:", 
-            font=ctk.CTkFont(size=13),
-            text_color=("#1e293b", "#f1f5f9")
-        ).pack(side="left")
-        
-        self.create_button(ref_frame, "X-axis", lambda: self.apply_reflection("x"), width=70, height=28, style="secondary").pack(side="left", padx=(8, 4))
-        self.create_button(ref_frame, "Y-axis", lambda: self.apply_reflection("y"), width=70, height=28, style="secondary").pack(side="left", padx=2)
-        self.create_button(ref_frame, "XY-line", lambda: self.apply_reflection("xy"), width=70, height=28, style="secondary").pack(side="left", padx=(2, 0))
-        
-        # Shear section
-        shear_frame = ctk.CTkFrame(trans_frame, fg_color="transparent")
-        shear_frame.pack(fill="x", padx=15, pady=(5, 15))
-        
-        ctk.CTkLabel(
-            shear_frame, 
-            text="Shear X:", 
-            font=ctk.CTkFont(size=13),
-            text_color=("#1e293b", "#f1f5f9")
-        ).pack(side="left")
-        
-        self.shear_x_entry = ctk.CTkEntry(
-            shear_frame, 
-            width=60, 
-            height=28,
-            corner_radius=4,
-            font=ctk.CTkFont(size=12),
-            fg_color=("#ffffff", "#334155"),
-            text_color=("#1e293b", "#f1f5f9"),
-            border_color=("#d1d5db", "#64748b")
-        )
-        self.shear_x_entry.pack(side="left", padx=(4, 8))
-        self.shear_x_entry.insert(0, "0.5")
-        
-        ctk.CTkLabel(
-            shear_frame, 
-            text="Y:", 
-            font=ctk.CTkFont(size=13),
-            text_color=("#1e293b", "#f1f5f9")
-        ).pack(side="left")
-        
-        self.shear_y_entry = ctk.CTkEntry(
-            shear_frame, 
-            width=60, 
-            height=28,
-            corner_radius=4,
-            font=ctk.CTkFont(size=12),
-            fg_color=("#ffffff", "#334155"),
-            text_color=("#1e293b", "#f1f5f9"),
-            border_color=("#d1d5db", "#64748b")
-        )
-        self.shear_y_entry.pack(side="left", padx=(4, 8))
-        self.shear_y_entry.insert(0, "0.5")
-        
-        self.create_button(shear_frame, "Shear", self.apply_shear, width=80, height=28).pack(side="left")
-
-    def setup_matrix_operations(self, parent):
-        """Setup basic matrix operations with clean layout"""
-        ops_frame = self.create_section_frame(parent, "Matrix Operations")
-        
-        # Button grid container
-        button_container = ctk.CTkFrame(ops_frame, fg_color="transparent")
-        button_container.pack(padx=15, pady=(0, 15))
-        
-        # Row 1
-        row1 = ctk.CTkFrame(button_container, fg_color="transparent")
-        row1.pack(fill="x", pady=2)
-        
-        self.create_button(row1, "Transpose", self.transpose_matrix, width=100, height=32).pack(side="left", padx=(0, 8))
-        self.create_button(row1, "Inverse", self.inverse_matrix, width=100, height=32).pack(side="left", padx=4)
-        self.create_button(row1, "Determinant", self.calculate_determinant, width=100, height=32).pack(side="left", padx=(8, 0))
-        
-        # Row 2
-        row2 = ctk.CTkFrame(button_container, fg_color="transparent")
-        row2.pack(fill="x", pady=2)
-        
-        self.create_button(row2, "Reset", self.reset_matrix, width=100, height=32, style="secondary").pack(side="left", padx=(0, 8))
-        self.create_button(row2, "Random", self.generate_random, width=100, height=32, style="secondary").pack(side="left", padx=4)
-        self.create_button(row2, "Identity", self.set_identity, width=100, height=32, style="secondary").pack(side="left", padx=(8, 0))
-
-    def setup_advanced_operations(self, parent):
-        """Setup advanced matrix operations with clean layout"""
-        advanced_frame = self.create_section_frame(parent, "Advanced Operations")
-        
-        # Button grid for advanced operations
-        button_container = ctk.CTkFrame(advanced_frame, fg_color="transparent")
-        button_container.pack(padx=15, pady=(0, 15))
-        
-        # Row 1
-        row1 = ctk.CTkFrame(button_container, fg_color="transparent")
-        row1.pack(fill="x", pady=2)
-        
-        self.create_button(row1, "Eigenvalues", self.show_eigenvalues, width=130, height=32).pack(side="left", padx=(0, 8))
-        self.create_button(row1, "SVD Analysis", self.show_svd, width=130, height=32).pack(side="left", padx=(8, 0))
-        
-        # Row 2
-        row2 = ctk.CTkFrame(button_container, fg_color="transparent")
-        row2.pack(fill="x", pady=2)
-        
-        self.create_button(row2, "Matrix Info", self.show_matrix_info, width=130, height=32, style="secondary").pack(side="left", padx=(0, 8))
-        self.create_button(row2, "Dot Product", self.show_dot_product, width=130, height=32, style="secondary").pack(side="left", padx=(8, 0))
-
-    def setup_history_controls(self, parent):
-        """Setup undo/redo and history controls with clean styling"""
-        history_frame = self.create_section_frame(parent, "History Control")
-        
-        # Main control buttons
-        button_container = ctk.CTkFrame(history_frame, fg_color="transparent")
-        button_container.pack(padx=15, pady=(0, 15))
-        
-        # Button row
-        button_row = ctk.CTkFrame(button_container, fg_color="transparent")
-        button_row.pack()
-        
-        self.undo_btn = self.create_button(button_row, "← Undo", self.undo, width=90, height=32, style="secondary")
-        self.undo_btn.pack(side="left", padx=(0, 8))
-        
-        self.redo_btn = self.create_button(button_row, "Redo →", self.redo, width=90, height=32, style="secondary")
-        self.redo_btn.pack(side="left", padx=4)
-        
-        self.create_button(button_row, "Clear", self.clear_history, width=90, height=32, style="secondary").pack(side="left", padx=(8, 0))
-
-    def setup_info_display(self, parent):
-        """Setup information display area with clean styling"""
-        info_frame = self.create_section_frame(parent, "Matrix Information")
-        
-        # Text display container
-        text_container = ctk.CTkFrame(info_frame, fg_color="transparent")
-        text_container.pack(fill="both", expand=True, padx=15, pady=(0, 15))
-        
-        # Clean text display
-        self.info_text = ctk.CTkTextbox(
-            text_container,
-            height=150,
-            corner_radius=6,
-            fg_color=("#ffffff", "#334155"),
-            text_color=("#1e293b", "#f1f5f9"),
-            border_width=1,
-            border_color=("#d1d5db", "#64748b"),
-            font=ctk.CTkFont(family="Consolas", size=11)
-        )
-        self.info_text.pack(fill="both", expand=True)
-        
-        # Set initial text
-        self.info_text.insert("0.0", "Matrix information will appear here...")
-        self.info_text.configure(state="disabled")
-    
-    def setup_right_panel(self, parent):
-        """Setup the visualization panel with clean styling"""
-        right_panel = ctk.CTkFrame(
-            parent,
-            fg_color=("#ffffff", "#334155"),
-            corner_radius=12,
-            border_width=1,
-            border_color=("#e2e8f0", "#64748b")
-        )
-        right_panel.grid(row=0, column=1, sticky="nsew")
-        
-        # Header
-        header_frame = ctk.CTkFrame(right_panel, fg_color="transparent")
-        header_frame.pack(fill="x", padx=20, pady=(20, 10))
-        
-        title_label = ctk.CTkLabel(
-            header_frame,
-            text="Transformation Visualization",
-            font=ctk.CTkFont(size=20, weight="bold"),
-            text_color=("#1e293b", "#f1f5f9")
-        )
-        title_label.pack()
-        
-        # Create matplotlib figure with proper styling
-        self.fig, self.ax = plt.subplots(figsize=(8, 6))
-        self.fig.patch.set_facecolor('white')
-        
-        # Configure the plot
-        self.ax.set_xlim(-3, 3)
-        self.ax.set_ylim(-3, 3)
-        self.ax.grid(True, alpha=0.3, color='#d1d5db')
-        self.ax.set_aspect('equal')
-        self.ax.axhline(y=0, color='#6b7280', linewidth=0.8)
-        self.ax.axvline(x=0, color='#6b7280', linewidth=0.8)
-        self.ax.set_facecolor('#f9fafb')
-        
-        # Style the axes
-        self.ax.spines['top'].set_visible(False)
-        self.ax.spines['right'].set_visible(False)
-        self.ax.spines['bottom'].set_color('#9ca3af')
-        self.ax.spines['left'].set_color('#9ca3af')
-        
-        # Set labels with clean styling
-        self.ax.set_xlabel('X', fontsize=12, color='#374151')
-        self.ax.set_ylabel('Y', fontsize=12, color='#374151')
-        
-        # Embed in tkinter
-        self.canvas = FigureCanvasTkAgg(self.fig, right_panel)
-        self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=20, pady=(0, 20))
-    
-    def calculate_plot_bounds(self, original, transformed):
-        """Calculate appropriate plot bounds based on data"""
-        # Collect all x and y coordinates
-        all_x = list(original[0]) if original is not None else []
-        all_y = list(original[1]) if original is not None else []
-        
-        if transformed is not None:
-            all_x.extend(transformed[0])
-            all_y.extend(transformed[1])
-        
-        if not all_x or not all_y:
-            return -3, 3, -3, 3  # Default bounds
-        
-        # Calculate bounds with padding
-        x_min, x_max = min(all_x), max(all_x)
-        y_min, y_max = min(all_y), max(all_y)
-        
-        # Add 20% padding
-        x_range = x_max - x_min
-        y_range = y_max - y_min
-        
-        # Ensure minimum range for small values
-        x_range = max(x_range, 2.0)
-        y_range = max(y_range, 2.0)
-        
-        x_padding = x_range * 0.2
-        y_padding = y_range * 0.2
-        
-        x_min -= x_padding
-        x_max += x_padding
-        y_min -= y_padding
-        y_max += y_padding
-        
-        return x_min, x_max, y_min, y_max
-
-    def update_display(self):
-        """Update the visualization and UI elements"""
-        # Get data for plotting
-        original = self.engine.get_original_shape()
-        transformed = self.engine.get_transformed_shape()
-        
-        # Calculate dynamic bounds
-        x_min, x_max, y_min, y_max = self.calculate_plot_bounds(original, transformed)
-        
-        # Clear and reconfigure plot with dynamic bounds
-        self.ax.clear()
-        self.ax.set_xlim(x_min, x_max)
-        self.ax.set_ylim(y_min, y_max)
-        self.ax.grid(True, alpha=0.3, color='#d1d5db')
-        self.ax.set_aspect('equal')
-        self.ax.axhline(y=0, color='#6b7280', linewidth=0.8)
-        self.ax.axvline(x=0, color='#6b7280', linewidth=0.8)
-        self.ax.set_facecolor('#f9fafb')
-        
-        # Style the axes consistently
-        self.ax.spines['top'].set_visible(False)
-        self.ax.spines['right'].set_visible(False)
-        self.ax.spines['bottom'].set_color('#9ca3af')
-        self.ax.spines['left'].set_color('#9ca3af')
-        
-        # Set labels
-        self.ax.set_xlabel('X', fontsize=12, color='#374151')
-        self.ax.set_ylabel('Y', fontsize=12, color='#374151')
-        
-        # Plot original shape
-        if original is not None:
-            self.ax.plot(original[0], original[1], color='#2563eb', linewidth=2.5, label='Original', alpha=0.8)
-        
-        # Plot transformed shape
-        if transformed is not None:
-            self.ax.plot(transformed[0], transformed[1], color='#dc2626', linewidth=2.5, label='Transformed', alpha=0.8)
-        
-        # Style the legend
-        legend = self.ax.legend(loc='upper right', frameon=True, fancybox=True, shadow=True)
-        legend.get_frame().set_facecolor('#ffffff')
-        legend.get_frame().set_alpha(0.9)
-        
-        # Update the canvas
-        self.canvas.draw()
-        
-        # Update matrix entries (only for 2x2 matrices)
-        matrix = self.engine.get_current_matrix()
-        if matrix.shape == (2, 2):
-            self.a11.delete(0, 'end')
-            self.a11.insert(0, f"{matrix[0,0]:.3f}")
-            self.a12.delete(0, 'end')
-            self.a12.insert(0, f"{matrix[0,1]:.3f}")
-            self.a21.delete(0, 'end')
-            self.a21.insert(0, f"{matrix[1,0]:.3f}")
-            self.a22.delete(0, 'end')
-            self.a22.insert(0, f"{matrix[1,1]:.3f}")
-        else:
-            # For non-2x2 matrices, clear the 2x2 input fields
-            for entry in [self.a11, self.a12, self.a21, self.a22]:
-                entry.delete(0, 'end')
-                entry.insert(0, "N/A")
-        
-        # Update undo/redo buttons
-        self.undo_btn.configure(state="normal" if self.engine.can_undo() else "disabled")
-        self.redo_btn.configure(state="normal" if self.engine.can_redo() else "disabled")
-        
-        # Update info display
-        self.update_info_display()
-    
-    def update_info_display(self):
-        """Update the information display"""
-        matrix = self.engine.get_current_matrix()
-        
-        info_text = f"Current Matrix ({matrix.shape[0]}x{matrix.shape[1]}):\n"
-        
-        # Format matrix display based on size
-        if matrix.shape[0] <= 6 and matrix.shape[1] <= 6:
-            info_text += f"{matrix}\n\n"
-        else:
-            info_text += f"Matrix too large to display ({matrix.shape[0]}x{matrix.shape[1]})\n\n"
-        
-        # Add matrix properties (only for square matrices)
-        if matrix.shape[0] == matrix.shape[1]:
-            det = self.engine.determinant()
-            trace = self.engine.trace()
-            info_text += f"Determinant: {det:.6f}\n"
-            info_text += f"Trace: {trace:.6f}\n"
-            info_text += f"Invertible: {'Yes' if abs(det) > 1e-10 else 'No'}\n\n"
-        else:
-            info_text += f"Matrix is {matrix.shape[0]}x{matrix.shape[1]} (non-square)\n"
-            info_text += f"Determinant: N/A (non-square)\n"
-            info_text += f"Trace: N/A (non-square)\n\n"
-        
-        history = self.engine.get_history()
-        info_text += f"Operation History ({len(history)} operations):\n"
-        for i, op in enumerate(history[-10:]):  # Show last 10 operations
-            marker = " -> " if i == len(history[-10:]) - 1 else "    "
-            info_text += f"{marker}{op}\n"
-        
-        self.info_text.configure(state="normal")
-        self.info_text.delete("0.0", tk.END)
-        self.info_text.insert("0.0", info_text)
-        self.info_text.configure(state="disabled")
-
-    # =====================================================
-    # MATRIX CREATION METHODS
-    # =====================================================
-    
-    def get_matrix_dimensions(self):
-        """Get matrix dimensions from input fields"""
-        try:
-            rows = int(self.rows_entry.get())
-            cols = int(self.cols_entry.get())
-            if rows <= 0 or cols <= 0:
-                raise ValueError("Dimensions must be positive")
-            return rows, cols
-        except ValueError as e:
-            messagebox.showerror("Error", f"Invalid dimensions: {e}")
-            return None, None
-    
-    def create_identity(self):
-        """Create identity matrix"""
-        rows, cols = self.get_matrix_dimensions()
-        if rows is not None and cols is not None:
-            if rows != cols:
-                messagebox.showerror("Error", "Identity matrix must be square (rows = cols)")
-                return
-            self.engine.create_identity_matrix(rows)
-            self.update_display()
-    
-    def create_random(self):
-        """Create random matrix"""
-        rows, cols = self.get_matrix_dimensions()
-        if rows is not None and cols is not None:
-            self.engine.create_random_matrix(rows, cols, -5, 5)
-            self.update_display()
-    
-    def create_zeros(self):
-        """Create zero matrix"""
-        rows, cols = self.get_matrix_dimensions()
-        if rows is not None and cols is not None:
-            self.engine.create_zero_matrix(rows, cols)
-            self.update_display()
-    
-    def create_ones(self):
-        """Create ones matrix"""
-        rows, cols = self.get_matrix_dimensions()
-        if rows is not None and cols is not None:
-            self.engine.create_ones_matrix(rows, cols)
-            self.update_display()
-    
-    def create_default_2x2(self):
-        """Create default 2x2 matrix"""
-        self.engine.set_matrix(np.array([[1, 2], [3, 4]]), "default_2x2")
-        self.update_display()
-    
-    def create_6x2_example(self):
-        """Create 6x2 example matrix for testing"""
-        example_matrix = np.array([
-            [1, 0],
-            [0, 1],  
-            [2, 3],
-            [-1, 2],
-            [0.5, -0.5],
-            [3, -1]
+        # UI Layout
+        self.panel_width = 250
+        self.viewport_rect = pygame.Rect(self.panel_width, 0, self.width - self.panel_width, self.height)
+        
+        # Initialize components
+        self.math_engine = MathEngine()
+        self.ui_manager = UIManager(self.colors)
+        self.renderer = Renderer(self.colors, self.viewport_rect)
+        
+        # View mode
+        self.is_3d_mode = True
+        self.view_rotation_x = np.radians(20)  # Initial view angle
+        self.view_rotation_y = np.radians(30)
+        
+        # Camera controls
+        self.camera_zoom = 50
+        self.camera_offset = [0, 0]
+        self.dragging = False
+        self.drag_start = (0, 0)
+        
+        # Create UI elements
+        self._create_ui()
+        
+        # Test points - cube for 3D, square for 2D
+        self.original_points_3d = np.array([
+            [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],  # Bottom face
+            [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]       # Top face
         ])
-        self.engine.set_matrix(example_matrix, "6x2_example")
-        self.update_display()
-
-    # =====================================================
-    # TRANSFORMATION METHODS (UPDATED)
-    # =====================================================
+        
+        self.original_points_2d = np.array([
+            [-1, -1], [1, -1], [1, 1], [-1, 1]  # Square
+        ])
+        
+        self.clock = pygame.time.Clock()
+        self.running = True
+        
+    def _create_ui(self):
+        """Create UI elements"""
+        self.ui_elements = []
+        
+        # Title
+        title = TextLabel("Matrix Visualizer", 10, 10, 24, self.colors['text'])
+        self.ui_elements.append(title)
+        
+        # 2D/3D Toggle
+        toggle_3d = Button("3D Mode", 10, 40, 230, 30, self.colors, self.toggle_3d_mode)
+        self.ui_elements.append(toggle_3d)
+        self.toggle_button = toggle_3d  # Keep reference for updating text
+        
+        # Buttons
+        buttons = [
+            Button("Set Matrix", 10, 80, 230, 40, self.colors, self.on_set_matrix),
+            Button("Rotate", 10, 130, 110, 40, self.colors, self.on_rotate),
+            Button("Scale", 130, 130, 110, 40, self.colors, self.on_scale),
+            Button("Translate", 10, 180, 110, 40, self.colors, self.on_translate),
+            Button("Reset", 130, 180, 110, 40, self.colors, self.on_reset),
+            Button("Undo", 10, 230, 110, 40, self.colors, self.on_undo),
+            Button("Redo", 130, 230, 110, 40, self.colors, self.on_redo)
+        ]
+        
+        # Add view control buttons for 3D mode
+        view_buttons = [
+            Button("View: Reset", 10, 280, 110, 30, self.colors, self.reset_view),
+            Button("View: Rotate", 130, 280, 110, 30, self.colors, self.rotate_view)
+        ]
+        
+        self.ui_elements.extend(buttons)
+        self.ui_elements.extend(view_buttons)
+        self.view_buttons = view_buttons  # Keep reference for showing/hiding
+        
+        # Matrix display
+        matrix_display = MatrixDisplay(10, 320, 230, 150, self.colors, self.math_engine)
+        self.ui_elements.append(matrix_display)
     
-    def apply_rotation(self):
-        """Apply rotation transformation based on selected mode"""
-        try:
-            angle = float(self.rotation_entry.get())
-            if self.transform_mode.get() == "create":
-                self.engine.create_rotation_matrix(angle)
-            else:
-                self.engine.apply_rotation(angle)
-            self.update_display()
-        except ValueError as e:
-            messagebox.showerror("Error", f"Please enter a valid angle: {e}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Transformation failed: {e}")
+    def toggle_3d_mode(self):
+        """Toggle between 2D and 3D mode"""
+        self.is_3d_mode = not self.is_3d_mode
+        self.toggle_button.text = "3D Mode" if self.is_3d_mode else "2D Mode"
+        
+        # Reset transformations when switching modes
+        self.math_engine.reset_matrix()
+        
+        print(f"Switched to {'3D' if self.is_3d_mode else '2D'} mode")
     
-    def apply_scaling(self):
-        """Apply scaling transformation based on selected mode"""
-        try:
-            scale_x = float(self.scale_x_entry.get())
-            scale_y = float(self.scale_y_entry.get())
-            if self.transform_mode.get() == "create":
-                self.engine.create_scaling_matrix(scale_x, scale_y)
-            else:
-                self.engine.apply_scaling(scale_x, scale_y)
-            self.update_display()
-        except ValueError as e:
-            messagebox.showerror("Error", f"Please enter valid scaling factors: {e}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Transformation failed: {e}")
+    def reset_view(self):
+        """Reset the 3D view angle"""
+        self.view_rotation_x = np.radians(20)
+        self.view_rotation_y = np.radians(30)
+        print("View reset")
     
-    def apply_shear(self):
-        """Apply shear transformation based on selected mode"""
-        try:
-            shear_x = float(self.shear_x_entry.get())
-            shear_y = float(self.shear_y_entry.get())
-            if self.transform_mode.get() == "create":
-                self.engine.create_shear_matrix(shear_x, shear_y)
-            else:
-                self.engine.apply_shear(shear_x, shear_y)
-            self.update_display()
-        except ValueError as e:
-            messagebox.showerror("Error", f"Please enter valid shear factors: {e}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Transformation failed: {e}")
-
-    def apply_custom_matrix(self):
-        """Apply the matrix from the input fields"""
-        try:
-            matrix = np.array([[float(self.a11.get()), float(self.a12.get())],
-                              [float(self.a21.get()), float(self.a22.get())]])
-            self.engine.set_matrix(matrix, "custom_matrix")
-            self.update_display()
-        except ValueError:
-            messagebox.showerror("Error", "Please enter valid numbers for all matrix elements")
+    def rotate_view(self):
+        """Rotate the 3D view"""
+        self.view_rotation_y += np.radians(15)
+        print(f"View rotated to Y: {np.degrees(self.view_rotation_y):.1f}°")
     
-    def apply_reflection(self, axis):
-        """Apply reflection transformation"""
-        self.engine.create_reflection_matrix(axis)
-        self.update_display()
+    def get_current_points(self):
+        """Get the current points based on mode"""
+        return self.original_points_3d if self.is_3d_mode else self.original_points_2d
     
-    def transpose_matrix(self):
-        """Transpose the current matrix"""
-        self.engine.set_transpose_matrix()
-        self.update_display()
-    
-    def inverse_matrix(self):
-        """Compute the inverse of the current matrix"""
-        if not self.engine.set_inverse_matrix():
-            messagebox.showerror("Error", "Matrix is not invertible (determinant is zero)")
+    def on_set_matrix(self):
+        """Handle set matrix button"""
+        print("Set Matrix clicked - would open matrix input dialog")
+        
+    def on_rotate(self):
+        """Handle rotate button"""
+        if self.is_3d_mode:
+            rotation = self.math_engine.create_rotation_matrix(30)  # 30 degrees around Z
         else:
-            self.update_display()
-    
-    def reset_matrix(self):
-        """Reset to identity matrix"""
-        self.engine.reset_to_identity()
-        self.update_display()
-    
-    def scalar_multiply(self):
-        """Multiply matrix by scalar"""
-        try:
-            scalar = float(self.scalar_entry.get())
-            self.engine.scalar_multiplication(scalar)
-            self.update_display()
-        except ValueError:
-            messagebox.showerror("Error", "Please enter a valid scalar value")
-    
-    def undo(self):
-        """Undo last operation"""
-        self.engine.undo()
-        self.update_display()
-    
-    def redo(self):
-        """Redo next operation"""
-        self.engine.redo()
-        self.update_display()
-    
-    def calculate_determinant(self):
-        """Calculate and show determinant"""
-        det = self.engine.determinant()
-        messagebox.showinfo("Determinant", f"Determinant = {det:.6f}")
-    
-    def set_identity(self):
-        """Set matrix entries to identity"""
-        self.a11.delete(0, tk.END)
-        self.a11.insert(0, "1")
-        self.a12.delete(0, tk.END)
-        self.a12.insert(0, "0")
-        self.a21.delete(0, tk.END)
-        self.a21.insert(0, "0")
-        self.a22.delete(0, tk.END)
-        self.a22.insert(0, "1")
-        self.engine.reset_to_identity()
-        self.update_display()
-    
-    def generate_random(self):
-        """Generate random matrix values"""
-        matrix = np.random.uniform(-2, 2, (2, 2))
-        self.a11.delete(0, tk.END)
-        self.a11.insert(0, f"{matrix[0,0]:.2f}")
-        self.a12.delete(0, tk.END)
-        self.a12.insert(0, f"{matrix[0,1]:.2f}")
-        self.a21.delete(0, tk.END)
-        self.a21.insert(0, f"{matrix[1,0]:.2f}")
-        self.a22.delete(0, tk.END)
-        self.a22.insert(0, f"{matrix[1,1]:.2f}")
-        self.engine.set_matrix(matrix, "random_matrix")
-        self.update_display()
-    
-    def show_dot_product(self):
-        """Show dot product calculation demonstration"""
-        matrix = self.engine.get_current_matrix()
-        test_vector = np.array([1, 1])
-        result = self.engine.dot_product(test_vector)
+            rotation = self.math_engine.create_rotation_matrix(30)  # 2D rotation
+        print("Rotation matrix:")
+        print(rotation)
+        self.math_engine.apply_transformation(rotation)
         
-        msg = "Dot Product Demonstration:\n\n"
-        msg += f"Matrix:\n{matrix}\n\n"
-        msg += f"Test Vector: {test_vector}\n\n"
-        msg += f"Result: {result}\n"
+    def on_scale(self):
+        """Handle scale button"""
+        if self.is_3d_mode:
+            scale = self.math_engine.create_scaling_matrix(1.2, 1.2, 1.2)
+        else:
+            scale = self.math_engine.create_scaling_matrix(1.2, 1.2)
+        print("Scale matrix:")
+        print(scale)
+        self.math_engine.apply_transformation(scale)
         
-        messagebox.showinfo("Dot Product", msg)
+    def on_translate(self):
+        """Handle translate button"""
+        if self.is_3d_mode:
+            # For 3D, we'll use a hack with the 3x3 matrix (only translates X and Y)
+            translation = self.math_engine.create_translation_matrix(0.5, 0.5)
+        else:
+            translation = self.math_engine.create_translation_matrix(0.5, 0.5)
+        print("Translation matrix:")
+        print(translation)
+        self.math_engine.apply_transformation(translation)
+        
+    def on_reset(self):
+        """Handle reset button"""
+        self.math_engine.reset_matrix()
+        
+    def on_undo(self):
+        """Handle undo button"""
+        self.math_engine.undo()
+        
+    def on_redo(self):
+        """Handle redo button"""
+        self.math_engine.redo()
     
-    def clear_history(self):
-        """Clear operation history"""
-        self.engine.clear_history()
-        self.update_display()
-
-    def show_eigenvalues(self):
-        """Show eigenvalues and eigenvectors"""
-        eigenvals, eigenvecs = self.engine.eigenvalues_eigenvectors()
-        
-        msg = "Eigenvalues and Eigenvectors:\n\n"
-        for i, (val, vec) in enumerate(zip(eigenvals, eigenvecs.T)):
-            msg += f"Eigenvalue {i+1}: {val:.6f}\n"
-            msg += f"Eigenvector {i+1}: [{vec[0]:.6f}, {vec[1]:.6f}]\n\n"
-        
-        messagebox.showinfo("Eigenvalue Decomposition", msg)
+    def handle_events(self):
+        """Handle pygame events"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left click
+                    # Check UI elements first
+                    clicked_ui = False
+                    for element in self.ui_elements:
+                        if hasattr(element, 'handle_click'):
+                            if element.handle_click(event.pos):
+                                clicked_ui = True
+                                break
+                    
+                    # If not clicking UI, start dragging viewport
+                    if not clicked_ui and self.viewport_rect.collidepoint(event.pos):
+                        self.dragging = True
+                        self.drag_start = event.pos
+                        
+                elif event.button == 4:  # Mouse wheel up
+                    if self.viewport_rect.collidepoint(event.pos):
+                        self.camera_zoom *= 1.1
+                        
+                elif event.button == 5:  # Mouse wheel down
+                    if self.viewport_rect.collidepoint(event.pos):
+                        self.camera_zoom *= 0.9
+                        
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.dragging = False
+                    
+            elif event.type == pygame.MOUSEMOTION:
+                # Update hover states for UI elements
+                for element in self.ui_elements:
+                    if hasattr(element, 'update_hover'):
+                        element.update_hover(event.pos)
+                
+                # Handle viewport dragging
+                if self.dragging:
+                    dx = event.pos[0] - self.drag_start[0]
+                    dy = event.pos[1] - self.drag_start[1]
+                    
+                    if self.is_3d_mode:
+                        # In 3D mode, dragging rotates the view
+                        self.view_rotation_y += dx * 0.01
+                        self.view_rotation_x += dy * 0.01
+                        # Clamp X rotation to avoid flipping
+                        self.view_rotation_x = max(-np.pi/2, min(np.pi/2, self.view_rotation_x))
+                    else:
+                        # In 2D mode, dragging pans the view
+                        self.camera_offset[0] += dx
+                        self.camera_offset[1] += dy
+                    
+                    self.drag_start = event.pos
     
-    def show_svd(self):
-        """Show Singular Value Decomposition"""
-        U, S, Vt = self.engine.singular_value_decomposition()
+    def update(self):
+        """Update application state"""
+        # Update UI elements
+        for element in self.ui_elements:
+            if hasattr(element, 'update'):
+                element.update()
         
-        msg = "Singular Value Decomposition:\n\n"
-        msg += f"U matrix:\n{U}\n\n"
-        msg += f"Singular values: {S}\n\n"
-        msg += f"V^T matrix:\n{Vt}\n"
-        
-        messagebox.showinfo("Singular Value Decomposition", msg)
+        # Show/hide view buttons based on mode
+        for button in self.view_buttons:
+            button.visible = self.is_3d_mode
     
-    def show_matrix_info(self):
-        """Show comprehensive matrix information"""
-        info = self.engine.get_matrix_info()
+    def render(self):
+        """Render everything"""
+        self.screen.fill(self.colors['background'])
         
-        msg = "Matrix Analysis:\n\n"
-        msg += f"Determinant: {info['determinant']:.6f}\n"
-        msg += f"Trace: {info['trace']:.6f}\n"
-        msg += f"Rank: {info['rank']}\n"
-        msg += f"Frobenius Norm: {info['norm_frobenius']:.6f}\n"
-        msg += f"2-Norm: {info['norm_2']:.6f}\n\n"
-        msg += f"Properties:\n"
-        msg += f"- Invertible: {info['is_invertible']}\n"
-        msg += f"- Symmetric: {info['is_symmetric']}\n"
-        msg += f"- Orthogonal: {info['is_orthogonal']}\n"
+        # Draw left panel
+        panel_rect = pygame.Rect(0, 0, self.panel_width, self.height)
+        pygame.draw.rect(self.screen, self.colors['panel'], panel_rect)
         
-        messagebox.showinfo("Matrix Information", msg)
+        # Draw UI elements
+        for element in self.ui_elements:
+            # Skip view buttons in 2D mode
+            if hasattr(element, 'visible') and not element.visible:
+                continue
+            element.draw(self.screen)
+        
+        # Draw viewport
+        current_points = self.get_current_points()
+        if self.is_3d_mode:
+            self.renderer.draw_3d_viewport(self.screen, current_points, 
+                                         self.math_engine, self.camera_zoom, self.camera_offset,
+                                         self.view_rotation_x, self.view_rotation_y)
+        else:
+            self.renderer.draw_2d_viewport(self.screen, current_points, 
+                                         self.math_engine, self.camera_zoom, self.camera_offset)
+        
+        pygame.display.flip()
     
     def run(self):
-        """Run the application"""
-        self.root.mainloop()
+        """Main application loop"""
+        while self.running:
+            self.handle_events()
+            self.update()
+            self.render()
+            self.clock.tick(60)
+        
+        pygame.quit()
+
+
+class UIManager:
+    """Manages UI state and interactions"""
+    
+    def __init__(self, colors):
+        self.colors = colors
+        self.font_small = pygame.font.Font(None, 18)
+        self.font_medium = pygame.font.Font(None, 24)
+        self.font_large = pygame.font.Font(None, 32)
+
+
+class Renderer:
+    """Handles 3D rendering and visualization"""
+    
+    def __init__(self, colors, viewport_rect):
+        self.colors = colors
+        self.viewport_rect = viewport_rect
+        self.center_x = viewport_rect.width // 2
+        self.center_y = viewport_rect.height // 2
+    
+    def apply_view_rotation(self, points_3d, rot_x, rot_y):
+        """Apply view rotation to 3D points"""
+        # Rotation around X axis
+        cos_x, sin_x = np.cos(rot_x), np.sin(rot_x)
+        rot_matrix_x = np.array([
+            [1, 0, 0],
+            [0, cos_x, -sin_x],
+            [0, sin_x, cos_x]
+        ])
+        
+        # Rotation around Y axis
+        cos_y, sin_y = np.cos(rot_y), np.sin(rot_y)
+        rot_matrix_y = np.array([
+            [cos_y, 0, sin_y],
+            [0, 1, 0],
+            [-sin_y, 0, cos_y]
+        ])
+        
+        # Apply rotations
+        view_matrix = rot_matrix_y @ rot_matrix_x
+        return np.array([view_matrix @ point for point in points_3d])
+    
+    def project_3d_to_2d(self, points_3d, zoom, offset):
+        """Simple orthographic projection"""
+        projected = []
+        for point in points_3d:
+            x = point[0] * zoom + self.center_x + offset[0]
+            y = -point[1] * zoom + self.center_y + offset[1]  # Flip Y for screen coords
+            projected.append((x + self.viewport_rect.x, y + self.viewport_rect.y))
+        return projected
+    
+    def project_2d_to_screen(self, points_2d, zoom, offset):
+        """Project 2D points to screen coordinates"""
+        projected = []
+        for point in points_2d:
+            x = point[0] * zoom + self.center_x + offset[0]
+            y = -point[1] * zoom + self.center_y + offset[1]  # Flip Y for screen coords
+            projected.append((x + self.viewport_rect.x, y + self.viewport_rect.y))
+        return projected
+    
+    def draw_grid(self, surface, zoom, offset):
+        """Draw grid in viewport"""
+        grid_size = 50
+        
+        # Vertical lines
+        for i in range(-10, 11):
+            x = i * grid_size * zoom + self.center_x + offset[0] + self.viewport_rect.x
+            if self.viewport_rect.left <= x <= self.viewport_rect.right:
+                pygame.draw.line(surface, self.colors['grid'], 
+                               (x, self.viewport_rect.top), 
+                               (x, self.viewport_rect.bottom))
+        
+        # Horizontal lines
+        for i in range(-10, 11):
+            y = i * grid_size * zoom + self.center_y + offset[1] + self.viewport_rect.y
+            if self.viewport_rect.top <= y <= self.viewport_rect.bottom:
+                pygame.draw.line(surface, self.colors['grid'], 
+                               (self.viewport_rect.left, y), 
+                               (self.viewport_rect.right, y))
+    
+    def draw_3d_axes(self, surface, zoom, offset, rot_x, rot_y):
+        """Draw 3D coordinate axes"""
+        # Define axis vectors
+        axis_length = 2.0
+        axes_3d = np.array([
+            [0, 0, 0], [axis_length, 0, 0],  # X axis
+            [0, 0, 0], [0, axis_length, 0],  # Y axis
+            [0, 0, 0], [0, 0, axis_length]   # Z axis
+        ])
+        
+        # Apply view rotation
+        axes_rotated = self.apply_view_rotation(axes_3d, rot_x, rot_y)
+        axes_2d = self.project_3d_to_2d(axes_rotated, zoom, offset)
+        
+        # Draw axes
+        colors = [self.colors['axis_x'], self.colors['axis_y'], self.colors['axis_z']]
+        labels = ['X', 'Y', 'Z']
+        
+        font = pygame.font.Font(None, 24)
+        
+        for i in range(3):
+            start_idx = i * 2
+            end_idx = i * 2 + 1
+            
+            start_point = axes_2d[start_idx]
+            end_point = axes_2d[end_idx]
+            
+            # Draw axis line
+            pygame.draw.line(surface, colors[i], start_point, end_point, 3)
+            
+            # Draw axis label
+            label = font.render(labels[i], True, colors[i])
+            label_pos = (end_point[0] + 10, end_point[1] - 10)
+            surface.blit(label, label_pos)
+    
+    def draw_2d_axes(self, surface, zoom, offset):
+        """Draw 2D coordinate axes"""
+        axis_x = self.center_x + offset[0] + self.viewport_rect.x
+        axis_y = self.center_y + offset[1] + self.viewport_rect.y
+        
+        # X axis
+        if self.viewport_rect.left <= axis_x <= self.viewport_rect.right:
+            pygame.draw.line(surface, self.colors['axis_x'], 
+                           (axis_x, self.viewport_rect.top), 
+                           (axis_x, self.viewport_rect.bottom), 2)
+        
+        # Y axis
+        if self.viewport_rect.top <= axis_y <= self.viewport_rect.bottom:
+            pygame.draw.line(surface, self.colors['axis_y'], 
+                           (self.viewport_rect.left, axis_y), 
+                           (self.viewport_rect.right, axis_y), 2)
+        
+        # Axis labels
+        font = pygame.font.Font(None, 24)
+        x_label = font.render("X", True, self.colors['axis_x'])
+        y_label = font.render("Y", True, self.colors['axis_y'])
+        
+        surface.blit(x_label, (self.viewport_rect.right - 30, axis_y + 10))
+        surface.blit(y_label, (axis_x + 10, self.viewport_rect.top + 10))
+    
+    def draw_3d_viewport(self, surface, original_points, math_engine, zoom, offset, rot_x, rot_y):
+        """Draw the 3D viewport"""
+        # Draw grid
+        self.draw_grid(surface, zoom / 50, offset)
+        
+        # Draw 3D axes
+        self.draw_3d_axes(surface, zoom, offset, rot_x, rot_y)
+        
+        # Transform points
+        transformed_points = math_engine.transform_points(original_points)
+        
+        # Apply view rotation
+        original_rotated = self.apply_view_rotation(original_points, rot_x, rot_y)
+        transformed_rotated = self.apply_view_rotation(transformed_points, rot_x, rot_y)
+        
+        # Project to 2D
+        original_2d = self.project_3d_to_2d(original_rotated, zoom, offset)
+        transformed_2d = self.project_3d_to_2d(transformed_rotated, zoom, offset)
+        
+        # Draw cube wireframe
+        self._draw_cube_wireframe(surface, original_2d, self.colors['original'])
+        self._draw_cube_wireframe(surface, transformed_2d, self.colors['transformed'])
+        
+        # Draw legend
+        font = pygame.font.Font(None, 24)
+        orig_text = font.render("Original", True, self.colors['original'])
+        trans_text = font.render("Transformed", True, self.colors['transformed'])
+        mode_text = font.render("3D Mode - Drag to rotate view", True, self.colors['text'])
+        
+        surface.blit(orig_text, (self.viewport_rect.x + 10, self.viewport_rect.y + 10))
+        surface.blit(trans_text, (self.viewport_rect.x + 10, self.viewport_rect.y + 35))
+        surface.blit(mode_text, (self.viewport_rect.x + 10, self.viewport_rect.bottom - 30))
+    
+    def draw_2d_viewport(self, surface, original_points, math_engine, zoom, offset):
+        """Draw the 2D viewport"""
+        # Draw grid
+        self.draw_grid(surface, zoom / 50, offset)
+        
+        # Draw 2D axes
+        self.draw_2d_axes(surface, zoom, offset)
+        
+        # Transform points
+        transformed_points = math_engine.transform_points(original_points)
+        
+        # Project to screen
+        original_2d = self.project_2d_to_screen(original_points, zoom, offset)
+        transformed_2d = self.project_2d_to_screen(transformed_points, zoom, offset)
+        
+        # Draw square
+        self._draw_2d_shape(surface, original_2d, self.colors['original'])
+        self._draw_2d_shape(surface, transformed_2d, self.colors['transformed'])
+        
+        # Draw legend
+        font = pygame.font.Font(None, 24)
+        orig_text = font.render("Original", True, self.colors['original'])
+        trans_text = font.render("Transformed", True, self.colors['transformed'])
+        mode_text = font.render("2D Mode - Drag to pan view", True, self.colors['text'])
+        
+        surface.blit(orig_text, (self.viewport_rect.x + 10, self.viewport_rect.y + 10))
+        surface.blit(trans_text, (self.viewport_rect.x + 10, self.viewport_rect.y + 35))
+        surface.blit(mode_text, (self.viewport_rect.x + 10, self.viewport_rect.bottom - 30))
+    
+    def _draw_cube_wireframe(self, surface, points_2d, color):
+        """Draw a cube wireframe"""
+        if len(points_2d) < 8:
+            return
+            
+        # Define cube edges (indices into points array)
+        edges = [
+            (0, 1), (1, 2), (2, 3), (3, 0),  # Bottom face
+            (4, 5), (5, 6), (6, 7), (7, 4),  # Top face
+            (0, 4), (1, 5), (2, 6), (3, 7)   # Vertical edges
+        ]
+        
+        for edge in edges:
+            start_point = points_2d[edge[0]]
+            end_point = points_2d[edge[1]]
+            
+            # Only draw if both points are within reasonable bounds
+            if (-100 < start_point[0] < self.viewport_rect.width + 100 and
+                -100 < start_point[1] < self.viewport_rect.height + 100 and
+                -100 < end_point[0] < self.viewport_rect.width + 100 and
+                -100 < end_point[1] < self.viewport_rect.height + 100):
+                
+                pygame.draw.line(surface, color, start_point, end_point, 2)
+    
+    def _draw_2d_shape(self, surface, points_2d, color):
+        """Draw a 2D shape (square)"""
+        if len(points_2d) < 4:
+            return
+        
+        # Draw square edges
+        for i in range(len(points_2d)):
+            start_point = points_2d[i]
+            end_point = points_2d[(i + 1) % len(points_2d)]
+            
+            pygame.draw.line(surface, color, start_point, end_point, 2)
+
+
+class Button:
+    """A clickable button UI element"""
+    
+    def __init__(self, text, x, y, width, height, colors, callback=None):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = text
+        self.colors = colors
+        self.callback = callback
+        self.font = pygame.font.Font(None, 24)
+        
+        self.is_hovered = False
+        self.is_pressed = False
+        self.visible = True  # Add visibility control
+    
+    def update_hover(self, mouse_pos):
+        """Update hover state"""
+        if self.visible:
+            self.is_hovered = self.rect.collidepoint(mouse_pos)
+    
+    def handle_click(self, mouse_pos):
+        """Handle click event"""
+        if self.visible and self.rect.collidepoint(mouse_pos):
+            if self.callback:
+                self.callback()
+            return True
+        return False
+    
+    def draw(self, surface):
+        """Draw the button"""
+        if not self.visible:
+            return
+            
+        # Choose color based on state
+        if self.is_pressed:
+            color = self.colors['button_active']
+        elif self.is_hovered:
+            color = self.colors['button_hover']
+        else:
+            color = self.colors['button']
+        
+        # Draw button
+        pygame.draw.rect(surface, color, self.rect)
+        pygame.draw.rect(surface, self.colors['text'], self.rect, 2)
+        
+        # Draw text
+        text_surface = self.font.render(self.text, True, self.colors['text'])
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        surface.blit(text_surface, text_rect)
+
+
+class TextLabel:
+    """A text label UI element"""
+    
+    def __init__(self, text, x, y, font_size, color):
+        self.text = text
+        self.pos = (x, y)
+        self.font = pygame.font.Font(None, font_size)
+        self.color = color
+    
+    def draw(self, surface):
+        """Draw the text label"""
+        text_surface = self.font.render(self.text, True, self.color)
+        surface.blit(text_surface, self.pos)
+
+
+class MatrixDisplay:
+    """Displays the current transformation matrix"""
+    
+    def __init__(self, x, y, width, height, colors, math_engine):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.colors = colors
+        self.math_engine = math_engine
+        self.font = pygame.font.Font(None, 18)
+    
+    def draw(self, surface):
+        """Draw the matrix display"""
+        # Draw background
+        pygame.draw.rect(surface, self.colors['button'], self.rect)
+        pygame.draw.rect(surface, self.colors['text'], self.rect, 1)
+        
+        # Get current matrix
+        matrix = self.math_engine.get_matrix()
+        
+        # Draw title
+        title_surface = self.font.render("Current Matrix:", True, self.colors['text'])
+        surface.blit(title_surface, (self.rect.x + 5, self.rect.y + 5))
+        
+        # Draw matrix values
+        y_offset = 25
+        for i in range(min(3, matrix.shape[0])):
+            row_text = "["
+            for j in range(min(3, matrix.shape[1])):
+                value = matrix[i, j]
+                row_text += f"{value:7.3f}"
+                if j < min(2, matrix.shape[1] - 1):
+                    row_text += ", "
+            row_text += "]"
+            
+            text_surface = self.font.render(row_text, True, self.colors['text'])
+            surface.blit(text_surface, (self.rect.x + 5, self.rect.y + y_offset))
+            y_offset += 20
+
 
 if __name__ == "__main__":
-    app = MatrixTransformationApp()
+    app = MatrixVisualizerApp()
     app.run()
